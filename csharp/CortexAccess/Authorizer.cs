@@ -5,6 +5,7 @@ namespace CortexAccess
     public class Authorizer
     {
         private CortexClient _ctxClient;
+        private Utils _utilities = new Utils();
         private string _cortexToken;
         private string _emotivId;
         private bool _isEulaAccepted;
@@ -33,7 +34,7 @@ namespace CortexAccess
             _ctxClient.OnAccessRightGranted += AccessRightGrantedOK; // inform user have granted or rejected access right for the App
             _ctxClient.OnAuthorize += AuthorizedOK;
             _ctxClient.OnEULAAccepted += EULAAcceptedOK;
-           
+
         }
 
         private void ConnectedOK(object sender, bool isConnected)
@@ -44,7 +45,7 @@ namespace CortexAccess
             }
             else
             {
-                Console.WriteLine("Can not connect to Cortex. Please restart cortex service");
+                _utilities.SendErrorMessage("Can not connect to Cortex, please restart Cortex.");
             }
         }
 
@@ -53,12 +54,11 @@ namespace CortexAccess
             _isEulaAccepted = isEULAAccepted;
             if (isEULAAccepted)
             {
-                // Authorize again
                 _ctxClient.Authorize(_licenseID, _debitNo);
             }
             else
             {
-                Console.WriteLine("User has not accepted eula. Please accept EULA on EMOTIV Launcher to proceed");
+                _utilities.SendErrorMessage("User has not accepted EULA, please accept on EMOTIV Launcher to proceed.");
             }
         }
 
@@ -66,7 +66,7 @@ namespace CortexAccess
         {
             if (!String.IsNullOrEmpty(cortexToken))
             {
-                Console.WriteLine("Authorize successfully.");
+                _utilities.SendSuccessMessage("User accepted EULA!");
                 _cortexToken = cortexToken;
                 _isEulaAccepted = true;
                 OnAuthorized(this, _cortexToken);
@@ -74,7 +74,7 @@ namespace CortexAccess
             else
             {
                 _isEulaAccepted = false;
-                Console.WriteLine("User has not accepted eula. Please accept EULA on EMOTIV Launcher to proceed");
+                _utilities.SendErrorMessage("User has not accepted EULA, please accept on EMOTIV Launcher to proceed.");
             }
         }
 
@@ -89,19 +89,15 @@ namespace CortexAccess
             }
             else
             {
-                Console.WriteLine("The access right to the Application has been rejected");
+                _utilities.SendErrorMessage("The access right to the application has been rejected, please try again.");
             }
         }
 
         private void RequestAccessDone(object sender, bool hasAccessRight)
         {
-            if (hasAccessRight)
+            if (!hasAccessRight)
             {
-                Console.WriteLine("The User has access right to this application.");
-            }
-            else
-            {
-                Console.WriteLine("The User has not granted access right to this application. Please use EMOTIV Launcher to proceed.");
+                _utilities.SendErrorMessage("Access has not been granted to this application. Please use the EMOTIV Launcher to proceed.");
             }
         }
 
@@ -109,7 +105,6 @@ namespace CortexAccess
         {
             if (hasAccessRight)
             {
-                // Authorize
                 _ctxClient.Authorize(_licenseID, _debitNo);
             }
             else
@@ -120,7 +115,7 @@ namespace CortexAccess
 
         private void UserLogoutOK(object sender, string message)
         {
-            Console.WriteLine(message);
+            _utilities.SendSuccessMessage(message);
             _emotivId = "";
             _cortexToken = "";
             _isEulaAccepted = false;
@@ -140,18 +135,14 @@ namespace CortexAccess
             if (!String.IsNullOrEmpty(emotivId))
             {
                 _emotivId = emotivId;
-
-                // check has access right
                 _ctxClient.HasAccessRights();
             }
             else
             {
-                Console.WriteLine("You must login via EMOTIV Launcher before working with Cortex");
+                _utilities.SendErrorMessage("Please login via EMOTIV Launcher before working with Cortex");
             }
-            
-        }
 
-        // Event
+        }
 
 
 
@@ -189,7 +180,7 @@ namespace CortexAccess
         }
 
         // Start
-        public void Start(string licenseID ="")
+        public void Start(string licenseID = "")
         {
             _licenseID = licenseID;
             _ctxClient.Open();

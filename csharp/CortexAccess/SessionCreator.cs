@@ -11,6 +11,7 @@ namespace CortexAccess
         private SessionStatus _status;
         private CortexClient _ctxClient;
         private string _cortexToken;
+        private Utils _utilities;
 
         //event
         public event EventHandler<string> OnSessionCreated;
@@ -31,7 +32,6 @@ namespace CortexAccess
 
         private void CreateSessionOk(object sender, SessionEventArgs e)
         {
-            Console.WriteLine("Session " + e.SessionId + " is created successfully.");
             _sessionId = e.SessionId;
             _status = e.Status;
             _applicationId = e.ApplicationId;
@@ -94,14 +94,13 @@ namespace CortexAccess
             {
                 _cortexToken = cortexToken;
                 string status = activeSession ? "active" : "open";
-                Console.WriteLine("Create session with headsetId " + headsetId);
                 _ctxClient.CreateSession(CortexToken, headsetId, status);
             }
             else
             {
-                Console.WriteLine("CreateSession: Invalid parameters");
+                _utilities.SendErrorMessage("Unable to create a session: Invalid parameters");
             }
-            
+
         }
 
         // Close Session

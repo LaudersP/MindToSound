@@ -11,6 +11,7 @@ namespace CortexAccess
         private CortexClient _ctxClient;
         private string _wantedHeadsetId; // headset id of wanted headset device
         private Timer _aTimer;
+        private Utils _utitilies;
 
         private bool _hasHeadsetConnected;
         private bool _isHeadsetScanning = false;
@@ -18,7 +19,6 @@ namespace CortexAccess
 
         // Event
         public event EventHandler<string> OnHeadsetConnected;
-        public event EventHandler<bool> OnHeadsetDisConnected;
 
         public bool IsHeadsetScanning { get => _isHeadsetScanning; }
         public bool HasHeadsetConnected { get => _hasHeadsetConnected; set => _hasHeadsetConnected = value; }
@@ -36,7 +36,7 @@ namespace CortexAccess
 
         public void FindHeadset(string wantedHeadsetId = "")
         {
-            Console.WriteLine("FindHeadset: hasHeadsetConnected " + _hasHeadsetConnected + " wantedHeadsetId: " + wantedHeadsetId);
+            // Check for a connected headset
             if (!_hasHeadsetConnected)
             {
                 _wantedHeadsetId = wantedHeadsetId;
@@ -50,7 +50,6 @@ namespace CortexAccess
         /// </summary>
         public void ScanHeadsets()
         {
-            Console.WriteLine("Start scanning headset.");
             _isHeadsetScanning = true;
             _ctxClient.ControlDevice("refresh", "", new JObject());
         }
@@ -64,7 +63,6 @@ namespace CortexAccess
         private void OnHeadsetConnectNotify(object sender, HeadsetConnectEventArgs e)
         {
             string headsetId = e.HeadsetId;
-            Console.WriteLine("OnHeadsetConnectNotify headsetId:" + headsetId + " _wantedHeadsetId:" + _wantedHeadsetId + " isSuccess " + e.IsSuccess);
             if (headsetId == _wantedHeadsetId)
             {
                 if (e.IsSuccess)
@@ -75,7 +73,7 @@ namespace CortexAccess
                 else
                 {
                     _hasHeadsetConnected = false;
-                    Console.WriteLine("Connect the headset " + headsetId + " unsuccessfully. Message : " + e.Message);
+                    _utitilies.SendErrorMessage("Connecting to headset " + headsetId + ", Message: " + e.Message);
                 }
             }
         }
@@ -119,7 +117,7 @@ namespace CortexAccess
             }
             else
             {
-                Console.WriteLine(" No headset available. Please connect headset to the machine");
+                _utitilies.SendErrorMessage("No headsets available. Please connect a headset to the machine via EMOTIV Launcher");
             }
         }
 

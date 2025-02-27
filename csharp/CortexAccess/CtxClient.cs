@@ -13,7 +13,7 @@ namespace CortexAccess
         Closed = 2
     }
 
-    // Event for subscribe  and unsubscribe
+    // Event for subscribe and unsubscribe
     public class MultipleResultEventArgs
     {
         public MultipleResultEventArgs(JArray successList, JArray failList)
@@ -91,6 +91,9 @@ namespace CortexAccess
         private WebSocket _wSC; // Websocket Client
         private int _nextRequestId; // Unique id for each request
         private bool _isWSConnected;
+
+        private Utils _utilities = new Utils();
+
         //Events
         private AutoResetEvent m_MessageReceiveEvent = new AutoResetEvent(false);
         private AutoResetEvent m_OpenedEvent = new AutoResetEvent(false);
@@ -146,11 +149,11 @@ namespace CortexAccess
             _wSC.Opened += new EventHandler(WebSocketClient_Opened);
 
             _wSC.Error += new EventHandler<SuperSocket.ClientEngine.ErrorEventArgs>(WebSocketClient_Error);
-           
+
             _wSC.Closed += new EventHandler(WebSocketClient_Closed);
 
             _wSC.MessageReceived += new EventHandler<MessageReceivedEventArgs>(WebSocketClient_MessageReceived);
-    }
+        }
         // Properties
         public static CortexClient Instance { get; } = new CortexClient();
 
@@ -174,8 +177,6 @@ namespace CortexAccess
             {
                 request.Add("params", param);
             }
-            Console.WriteLine("Send " + method);
-            //Console.WriteLine(request.ToString());
 
             // send the json message
             _wSC.Send(request.ToString());
@@ -183,12 +184,12 @@ namespace CortexAccess
             _methodForRequestId.Add(_nextRequestId, method);
             _nextRequestId++;
         }
+
         // Handle receieved message 
         private void WebSocketClient_MessageReceived(object sender, MessageReceivedEventArgs e)
         {
             m_CurrentMessage = e.Message;
             m_MessageReceiveEvent.Set();
-            //Console.WriteLine("Received: " + e.Message);
 
             JObject response = JObject.Parse(e.Message);
 
@@ -197,15 +198,16 @@ namespace CortexAccess
                 int id = (int)response["id"];
                 string method = _methodForRequestId[id];
                 _methodForRequestId.Remove(id);
-                
+
                 if (response["error"] != null)
                 {
                     JObject error = (JObject)response["error"];
                     int code = (int)error["code"];
-                    string messageError = (string)error["message"];
-                    Console.WriteLine("Received: " + messageError);
+                    string errorMessage = (string)error["message"];
+                    _utilities.SendErrorMessage(errorMessage);
+
                     //Send Error message event
-                    OnErrorMsgReceived(this, new ErrorMsgEventArgs(code, messageError));
+                    OnErrorMsgReceived(this, new ErrorMsgEventArgs(code, errorMessage));
                 }
                 else
                 {
@@ -223,7 +225,6 @@ namespace CortexAccess
 
                 foreach (JProperty property in response.Properties())
                 {
-                    //Console.WriteLine(property.Name + " - " + property.Value);
                     if (property.Name != "sid" &&
                         property.Name != "time")
                     {
@@ -246,7 +247,6 @@ namespace CortexAccess
         // handle Response
         private void HandleResponse(string method, JToken data)
         {
-            Console.WriteLine("handleResponse: " + method);
             if (method == "queryHeadsets")
             {
                 List<Headset> headsetLists = new List<Headset>();
@@ -260,7 +260,6 @@ namespace CortexAccess
             else if (method == "controlDevice")
             {
                 string command = (string)data["command"];
-                Console.WriteLine("controlDevice response for command " + command);
             }
             else if (method == "getUserLogin")
             {
@@ -327,12 +326,52 @@ namespace CortexAccess
                 OnSubscribeData(this, new MultipleResultEventArgs(successList, failList));
 
             }
+            else if (method == "getDetectionInfo")
+            {
+                OnGetDetectionInfo(this, (JObject)data);
+            }
+            else if (method == "getCurrentProfile")
+            {
+                if (data["name"] == null)
+                    OnGetCurrentProfile(this, "");
+                else
+                    OnGetCurrentProfile(this, (string)data["name"]);
+            }
+            else if (method == "setupProfile")
+            {
+                string action = (string)data["action"];
+                string profileName = (string)data["name"];
+                if (action == "create")
+                {
+                    OnCreateProfile(this, profileName);
+                }
+                else if (action == "load")
+                {
+                    OnLoadProfile(this, profileName);
+                }
+                else if (action == "save")
+                {
+                    OnSaveProfile(this, profileName);
+                }
+                else if (action == "unload")
+                {
+                    OnUnloadProfile(this, true);
+                }
+                else if (action == "rename")
+                {
+                    OnRenameProfile(this, profileName);
+                }
+                else if (action == "delete")
+                {
+                    OnDeleteProfile(this, profileName);
+                }
+            }
         }
 
         // handle warning response
         private void HandleWarning(int code, JToken messageData)
         {
-            Console.WriteLine("handleWarning: " + code);
+            _utilities.SendWarningMessage(code.ToString());
             if (code == WarningCode.AccessRightGranted)
             {
                 // granted access right
@@ -405,7 +444,7 @@ namespace CortexAccess
 
         private void WebSocketClient_Error(object sender, SuperSocket.ClientEngine.ErrorEventArgs e)
         {
-            Console.WriteLine(e.Exception.GetType() + ":" + e.Exception.Message + Environment.NewLine + e.Exception.StackTrace);
+            _utilities.SendErrorMessage(e.Exception.Message + Environment.NewLine + e.Exception.StackTrace);
 
             if (e.Exception.InnerException != null)
             {
@@ -422,8 +461,7 @@ namespace CortexAccess
 
             if (!m_OpenedEvent.WaitOne(10000))
             {
-                Console.WriteLine("Failed to Opened session ontime");
-                //Assert.Fail("Failed to Opened session ontime");
+                _utilities.SendErrorMessage("Unable to create a session, please restart the program.");
             }
             if (_wSC.State == WebSocketState.Open)
             {
@@ -503,7 +541,6 @@ namespace CortexAccess
         // mappings is required if connect to epoc flex
         public void ControlDevice(string command, string headsetId, JObject mappings)
         {
-            Console.WriteLine("ControlDevice " + command + " headsetId:" + headsetId);
             JObject param = new JObject();
             param.Add("command", command);
             if (!String.IsNullOrEmpty(headsetId))
@@ -543,6 +580,117 @@ namespace CortexAccess
             SendTextMessage(param, "updateSession", true);
         }
 
+        // CreateRecord
+        // Required params: session, title, cortexToken
+        public void CreateRecord(string cortexToken, string sessionId, string title,
+                                 JToken description = null, JToken subjectName = null, List<string> tags = null)
+        {
+            JObject param = new JObject();
+            param.Add("session", sessionId);
+            param.Add("cortexToken", cortexToken);
+            param.Add("title", title);
+            if (description != null)
+            {
+                param.Add("description", description);
+            }
+            if (subjectName != null)
+            {
+                param.Add("subjectName", subjectName);
+            }
+            if (tags != null)
+            {
+                param.Add("tags", JArray.FromObject(tags));
+            }
+            SendTextMessage(param, "createRecord", true);
+        }
+
+        // StopRecord
+        // Required params: session, cortexToken
+        public void StopRecord(string cortexToken, string sessionId)
+        {
+            JObject param = new JObject();
+            param.Add("session", sessionId);
+            param.Add("cortexToken", cortexToken);
+            SendTextMessage(param, "stopRecord", true);
+        }
+
+        // UpdateRecord
+        // Required params: session, record
+        public void UpdateRecord(string cortexToken, string recordId, string description = null, List<string> tags = null)
+        {
+            JObject param = new JObject();
+            param.Add("record", recordId);
+            param.Add("cortexToken", cortexToken);
+            if (description != null)
+            {
+                param.Add("description", description);
+            }
+            if (tags != null)
+            {
+                param.Add("tags", JArray.FromObject(tags));
+            }
+            SendTextMessage(param, "updateRecord", true);
+        }
+
+        // QueryRecord
+        // Required params: cortexToken, query
+        public void QueryRecord(string cortexToken, JObject query, JArray orderBy = null, JToken offset = null, JToken limit = null)
+        {
+            JObject param = new JObject();
+            param.Add("query", query);
+            param.Add("cortexToken", cortexToken);
+            if (orderBy != null)
+            {
+                param.Add("orderBy", orderBy);
+            }
+            if (offset != null)
+            {
+                param.Add("offset", (long)offset);
+            }
+            if (limit != null)
+            {
+                param.Add("limit", (long)limit);
+            }
+            SendTextMessage(param, "queryRecords", true);
+        }
+
+        // DeleteRecord
+        // Required params: session, records
+        public void DeleteRecord(string cortexToken, List<string> records)
+        {
+            JObject param = new JObject();
+            param.Add("records", JArray.FromObject(records));
+            param.Add("cortexToken", cortexToken);
+            SendTextMessage(param, "deleteRecord", true);
+        }
+
+        // InjectMarker
+        // Required params: session, cortexToken, label, value, time
+        public void InjectMarker(string cortexToken, string sessionId, string label, JToken value, double time, string port = null)
+        {
+            JObject param = new JObject();
+            param.Add("session", sessionId);
+            param.Add("cortexToken", cortexToken);
+            param.Add("label", label);
+            param.Add("time", time);
+            param.Add("value", value);
+            if (port != null)
+                param.Add("port", port);
+            SendTextMessage(param, "injectMarker", true);
+        }
+
+        // UpdateMarker
+        // Required params: session, cortexToken, label, value, time
+        public void UpdateMarker(string cortexToken, string sessionId, string markerId, double time)
+        {
+            JObject param = new JObject();
+            param.Add("session", sessionId);
+            param.Add("cortexToken", cortexToken);
+            param.Add("markerId", markerId);
+            param.Add("time", time);
+            SendTextMessage(param, "updateMarker", true);
+        }
+
         // Subscribe Data
         // Required params: session, cortexToken, streams
         public void Subscribe(string cortexToken, string sessionId, List<string> streams)
@@ -563,6 +711,74 @@ namespace CortexAccess
             param.Add("cortexToken", cortexToken);
             param.Add("streams", JToken.FromObject(streams));
             SendTextMessage(param, "unsubscribe", true);
+        }
+
+        // Training - Profile
+        // getDetectionInfo
+        // Required params: detection
+        public void GetDetectionInfo(string detection)
+        {
+            JObject param = new JObject();
+            param.Add("detection", detection);
+            SendTextMessage(param, "getDetectionInfo", true);
+        }
+        // getCurrentProfile
+        // Required params: cortexToken, headset
+        public void GetCurrentProfile(string cortexToken, string headsetId)
+        {
+            JObject param = new JObject();
+            param.Add("cortexToken", cortexToken);
+            param.Add("headset", headsetId);
+            SendTextMessage(param, "getCurrentProfile", true);
+        }
+        // setupProfile
+        // Required params: cortexToken, profile, status
+        public void SetupProfile(string cortexToken, string profile, string status, string headsetId = null, string newProfileName = null)
+        {
+            JObject param = new JObject();
+            param.Add("profile", profile);
+            param.Add("cortexToken", cortexToken);
+            param.Add("status", status);
+            if (headsetId != null)
+            {
+                param.Add("headset", headsetId);
+            }
+            if (newProfileName != null)
+            {
+                param.Add("newProfileName", newProfileName);
+            }
+            SendTextMessage(param, "setupProfile", true);
+        }
+        // queryProfile
+        // Required params: cortexToken
+        public void QueryProfile(string cortexToken)
+        {
+            JObject param = new JObject();
+            param.Add("cortexToken", cortexToken);
+            SendTextMessage(param, "queryProfile", true);
+        }
+        // getTrainingTime
+        // Required params: cortexToken
+        public void GetTrainingTime(string cortexToken, string detection, string sessionId)
+        {
+            JObject param = new JObject();
+            param.Add("cortexToken", cortexToken);
+            param.Add("detection", detection);
+            param.Add("session", sessionId);
+            SendTextMessage(param, "getTrainingTime", true);
+        }
+        // training
+        // Required params: cortexToken, profile, status
+        public void Training(string cortexToken, string sessionId, string status, string detection, string action)
+        {
+            JObject param = new JObject();
+            param.Add("session", sessionId);
+            param.Add("cortexToken", cortexToken);
+            param.Add("status", status);
+            param.Add("detection", detection);
+            param.Add("action", action);
+
+            SendTextMessage(param, "training", true);
         }
     }
 }

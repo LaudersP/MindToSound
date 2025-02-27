@@ -21,14 +21,14 @@ namespace CortexAccess
         public Headset()
         {
         }
-        public Headset (JObject jHeadset)
+        public Headset(JObject jHeadset)
         {
             HeadsetID = (string)jHeadset["id"];
             Status = (string)jHeadset["status"];
             FirmwareVersion = (string)jHeadset["firmware"];
             DongleSerial = (string)jHeadset["dongle"];
             Sensors = new ArrayList();
-            
+
             foreach (JToken sensor in (JArray)jHeadset["sensors"])
             {
                 Sensors.Add(sensor.ToString());

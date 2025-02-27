@@ -9,6 +9,7 @@ namespace CortexAccess
     {
         private CortexClient _ctxClient;
         private List<string> _streams;
+        private Utils _utilities = new Utils();
         private string _cortexToken;
         private string _sessionId;
         private bool _isActiveSession;
@@ -48,7 +49,8 @@ namespace CortexAccess
         public event EventHandler<Dictionary<string, JArray>> OnSubscribed;
 
         // Constructor
-        public DataStreamExample() {
+        public DataStreamExample()
+        {
 
             _authorizer = new Authorizer();
             _headsetFinder = new HeadsetFinder();
@@ -76,7 +78,7 @@ namespace CortexAccess
         {
             if (sessionId == _sessionId)
             {
-                Console.WriteLine("The Session " + sessionId + " has closed successfully.");
+                _utilities.SendSuccessMessage("The session " + sessionId + " has closed successfully...");
                 _sessionId = "";
                 _headsetFinder.HasHeadsetConnected = false;
             }
@@ -97,7 +99,7 @@ namespace CortexAccess
                 string streamName = (string)ele["streamName"];
                 int code = (int)ele["code"];
                 string errorMessage = (string)ele["message"];
-                Console.WriteLine("UnSubscribe stream " + streamName + " unsuccessfully." + " code: " + code + " message: " + errorMessage);
+                _utilities.SendErrorMessage("Unable to unsubscribe from " + streamName + ". Code: " + code + ", Message: " + errorMessage);
             }
         }
 
@@ -108,7 +110,7 @@ namespace CortexAccess
                 string streamName = (string)ele["streamName"];
                 int code = (int)ele["code"];
                 string errorMessage = (string)ele["message"];
-                Console.WriteLine("Subscribe stream " + streamName + " unsuccessfully." + " code: " + code + " message: " + errorMessage);
+                _utilities.SendErrorMessage("Unable to unsubscribe from " + streamName + ". Code: " + code + ", Message: " + errorMessage);
                 if (_streams.Contains(streamName))
                 {
                     _streams.Remove(streamName);
@@ -127,24 +129,28 @@ namespace CortexAccess
             }
             else
             {
-                Console.WriteLine("No Subscribe Stream Available");
+                _utilities.SendErrorMessage("No available subscribe stream(s), please try again.");
             }
         }
 
         private void SessionCreatedOk(object sender, string sessionId)
         {
             _sessionId = sessionId;
-            // subscribe
             string streamsString = string.Join(", ", Streams);
-            Console.WriteLine("Session is created successfully. Subscribe for Streams: " + streamsString);
+
+            _utilities.SendSuccessMessage("Connected to Band Power Logger!");
+
+            // subscribe
             _ctxClient.Subscribe(_cortexToken, _sessionId, Streams);
         }
 
         private void HeadsetConnectedOK(object sender, string headsetId)
         {
-            Console.WriteLine("HeadsetConnectedOK " + headsetId);
+            _utilities.SendSuccessMessage("Successfully connected to \'" + headsetId + "\'!");
+
             // Wait a moment before creating session
             System.Threading.Thread.Sleep(1500);
+
             // CreateSession
             _sessionCreator.Create(_cortexToken, headsetId, _isActiveSession);
         }
@@ -167,7 +173,7 @@ namespace CortexAccess
 
         private void StreamDataReceived(object sender, StreamDataEventArgs e)
         {
-            Console.WriteLine(e.StreamName + " data received.");
+            //Console.WriteLine(e.StreamName + " data received.");
             ArrayList data = e.Data.ToObject<ArrayList>();
             // insert timestamp to datastream
             data.Insert(0, e.Time);
@@ -177,7 +183,7 @@ namespace CortexAccess
             }
             else if (e.StreamName == "mot")
             {
-                
+
                 OnMotionDataReceived(this, data);
             }
             else if (e.StreamName == "met")
@@ -191,7 +197,7 @@ namespace CortexAccess
         }
         private void MessageErrorRecieved(object sender, ErrorMsgEventArgs e)
         {
-            Console.WriteLine("MessageErrorRecieved :code " + e.Code + " message " + e.MessageError);
+            _utilities.SendErrorMessage("Code: " + e.Code + ", Message: " + e.MessageError);
         }
 
         // set Streams
@@ -203,7 +209,7 @@ namespace CortexAccess
             }
         }
         // start
-        public void Start(string licenseID="", bool activeSession = false, string wantedHeadsetId = "")
+        public void Start(string licenseID = "", bool activeSession = false, string wantedHeadsetId = "")
         {
             _wantedHeadsetId = wantedHeadsetId;
             _isActiveSession = activeSession;
@@ -218,7 +224,7 @@ namespace CortexAccess
                 // unsubscribe all data
                 _ctxClient.UnSubscribe(_cortexToken, _sessionId, _streams);
             }
-            else 
+            else
                 _ctxClient.UnSubscribe(_cortexToken, _sessionId, streams);
         }
         public void CloseSession()
