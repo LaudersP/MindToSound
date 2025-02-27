@@ -112,10 +112,6 @@ namespace CortexAccess
         public event EventHandler<SessionEventArgs> OnUpdateSession;
         public event EventHandler<MultipleResultEventArgs> OnSubscribeData;
         public event EventHandler<MultipleResultEventArgs> OnUnSubscribeData;
-        public event EventHandler<Record> OnCreateRecord;
-        public event EventHandler<Record> OnStopRecord;
-        public event EventHandler<Record> OnUpdateRecord;
-        public event EventHandler<List<Record>> OnQueryRecords;
         public event EventHandler<MultipleResultEventArgs> OnDeleteRecords;
         public event EventHandler<JObject> OnInjectMarker;
         public event EventHandler<JObject> OnUpdateMarker;
@@ -318,38 +314,6 @@ namespace CortexAccess
                 string appId = (string)data["appId"];
                 OnUpdateSession(this, new SessionEventArgs(sessionId, status, appId));
             }
-            else if (method == "createRecord")
-            {
-                Record record = new Record((JObject)data["record"]);
-                OnCreateRecord(this, record);
-            }
-            else if (method == "stopRecord")
-            {
-                Record record = new Record((JObject)data["record"]);
-                OnStopRecord(this, record);
-            }
-            else if (method == "updateRecord")
-            {
-                Record record = new Record((JObject)data);
-                OnUpdateRecord(this, record);
-            }
-            else if (method == "queryRecords")
-            {
-                int count = (int)data["count"];
-                JArray records = (JArray)data["records"];
-                List<Record> recordLists = new List<Record>();
-                foreach(JObject ele in records)
-                {
-                    recordLists.Add(new Record(ele));
-                }
-                OnQueryRecords(this, recordLists);
-            }
-            else if (method == "deleteRecord")
-            {
-                JArray successList = (JArray)data["success"];
-                JArray failList = (JArray)data["failure"];
-                OnDeleteRecords(this, new MultipleResultEventArgs(successList, failList));
-            }
             else if (method == "unsubscribe")
             {
                 JArray successList = (JArray)data["success"];
@@ -363,69 +327,6 @@ namespace CortexAccess
                 OnSubscribeData(this, new MultipleResultEventArgs(successList, failList));
 
             }
-            else if (method == "injectMarker")
-            {
-                JObject marker = (JObject)data["marker"];
-                OnInjectMarker(this, marker);
-            }
-            else if (method == "updateMarker")
-            {
-                JObject marker = (JObject)data["marker"];
-                OnUpdateMarker(this, marker);
-            }
-            else if (method == "getDetectionInfo")
-            {
-                OnGetDetectionInfo(this, (JObject)data);
-            }
-            else if (method == "getCurrentProfile")
-            {
-                if (data["name"] == null)
-                    OnGetCurrentProfile(this, "");
-                else
-                    OnGetCurrentProfile(this, (string)data["name"]);
-            }
-            else if (method == "setupProfile")
-            {
-                string action = (string)data["action"];
-                string profileName = (string)data["name"];
-                if (action == "create")
-                {
-                    OnCreateProfile(this, profileName);
-                }
-                else if (action == "load")
-                {
-                    OnLoadProfile(this, profileName);
-                }
-                else if (action == "save")
-                {
-                    OnSaveProfile(this, profileName);
-                }
-                else if (action == "unload")
-                {
-                    OnUnloadProfile(this, true);
-                }
-                else if (action == "rename")
-                {
-                    OnRenameProfile(this, profileName);
-                }
-                else if (action == "delete")
-                {
-                    OnDeleteProfile(this, profileName);
-                }
-            }
-            else if (method == "queryProfile")
-            {
-                OnQueryProfile(this, (JArray)data);
-            }
-            else if (method == "training")
-            {
-                OnTraining(this, (JObject)data);
-            }
-            else if (method == "getTrainingTime")
-            {
-                OnGetTrainingTime(this, (double)data["time"]);
-            }
-
         }
 
         // handle warning response
@@ -642,117 +543,6 @@ namespace CortexAccess
             SendTextMessage(param, "updateSession", true);
         }
 
-        // CreateRecord
-        // Required params: session, title, cortexToken
-        public void CreateRecord(string cortexToken, string sessionId, string title,
-                                 JToken description = null, JToken subjectName = null, List<string> tags = null)
-        {
-            JObject param = new JObject();
-            param.Add("session", sessionId);
-            param.Add("cortexToken", cortexToken);
-            param.Add("title", title);
-            if (description != null)
-            {
-                param.Add("description", description);
-            }
-            if (subjectName != null)
-            {
-                param.Add("subjectName", subjectName);
-            }
-            if (tags != null)
-            {
-                param.Add("tags", JArray.FromObject(tags));
-            }
-            SendTextMessage(param, "createRecord", true);
-        }
-
-        // StopRecord
-        // Required params: session, cortexToken
-        public void StopRecord(string cortexToken, string sessionId)
-        {
-            JObject param = new JObject();
-            param.Add("session", sessionId);
-            param.Add("cortexToken", cortexToken);
-            SendTextMessage(param, "stopRecord", true);
-        }
-
-        // UpdateRecord
-        // Required params: session, record
-        public void UpdateRecord(string cortexToken, string recordId, string description = null, List<string> tags = null)
-        {
-            JObject param = new JObject();
-            param.Add("record", recordId);
-            param.Add("cortexToken", cortexToken);
-            if (description != null)
-            {
-                param.Add("description", description);
-            }
-            if (tags != null)
-            {
-                param.Add("tags", JArray.FromObject(tags));
-            }
-            SendTextMessage(param, "updateRecord", true);
-        }
-
-        // QueryRecord
-        // Required params: cortexToken, query
-        public void QueryRecord(string cortexToken, JObject query, JArray orderBy = null, JToken offset = null, JToken limit = null)
-        {
-            JObject param = new JObject();
-            param.Add("query", query);
-            param.Add("cortexToken", cortexToken);
-            if (orderBy != null)
-            {
-                param.Add("orderBy", orderBy);
-            }
-            if (offset != null)
-            {
-                param.Add("offset", (long)offset);
-            }
-            if (limit != null)
-            {
-                param.Add("limit", (long)limit);
-            }
-            SendTextMessage(param, "queryRecords", true);
-        }
-
-        // DeleteRecord
-        // Required params: session, records
-        public void DeleteRecord(string cortexToken, List<string> records)
-        {
-            JObject param = new JObject();
-            param.Add("records", JArray.FromObject(records));
-            param.Add("cortexToken", cortexToken);
-            SendTextMessage(param, "deleteRecord", true);
-        }
-
-        // InjectMarker
-        // Required params: session, cortexToken, label, value, time
-        public void InjectMarker(string cortexToken, string sessionId, string label, JToken value, double time, string port = null)
-        {
-            JObject param = new JObject();
-            param.Add("session", sessionId);
-            param.Add("cortexToken", cortexToken);
-            param.Add("label", label);
-            param.Add("time", time);
-            param.Add("value", value);
-            if (port != null)
-                param.Add("port", port);
-            SendTextMessage(param, "injectMarker", true);
-        }
-
-        // UpdateMarker
-        // Required params: session, cortexToken, label, value, time
-        public void UpdateMarker(string cortexToken, string sessionId, string markerId, double time)
-        {
-            JObject param = new JObject();
-            param.Add("session", sessionId);
-            param.Add("cortexToken", cortexToken);
-            param.Add("markerId", markerId);
-            param.Add("time", time);
-            SendTextMessage(param, "updateMarker", true);
-        }
-
         // Subscribe Data
         // Required params: session, cortexToken, streams
         public void Subscribe(string cortexToken, string sessionId, List<string> streams)
@@ -774,76 +564,5 @@ namespace CortexAccess
             param.Add("streams", JToken.FromObject(streams));
             SendTextMessage(param, "unsubscribe", true);
         }
-
-        // Training - Profile
-        // getDetectionInfo
-        // Required params: detection
-        public void GetDetectionInfo(string detection)
-        {
-            JObject param = new JObject();
-            param.Add("detection", detection);
-            SendTextMessage(param, "getDetectionInfo", true);
-        }
-        // getCurrentProfile
-        // Required params: cortexToken, headset
-        public void GetCurrentProfile(string cortexToken, string headsetId)
-        {
-            JObject param = new JObject();
-            param.Add("cortexToken", cortexToken);
-            param.Add("headset", headsetId);
-            SendTextMessage(param, "getCurrentProfile", true);
-        }
-        // setupProfile
-        // Required params: cortexToken, profile, status
-        public void SetupProfile(string cortexToken, string profile, string status, string headsetId = null, string newProfileName = null)
-        {
-            JObject param = new JObject();
-            param.Add("profile", profile);
-            param.Add("cortexToken", cortexToken);
-            param.Add("status", status);
-            if (headsetId != null)
-            {
-                param.Add("headset", headsetId);
-            }
-            if (newProfileName != null)
-            {
-                param.Add("newProfileName", newProfileName);
-            }
-            SendTextMessage(param, "setupProfile", true);
-        }
-        // queryProfile
-        // Required params: cortexToken
-        public void QueryProfile(string cortexToken)
-        {
-            JObject param = new JObject();
-            param.Add("cortexToken", cortexToken);
-            SendTextMessage(param, "queryProfile", true);
-        }
-        // getTrainingTime
-        // Required params: cortexToken
-        public void GetTrainingTime(string cortexToken, string detection, string sessionId)
-        {
-            JObject param = new JObject();
-            param.Add("cortexToken", cortexToken);
-            param.Add("detection", detection);
-            param.Add("session", sessionId);
-            SendTextMessage(param, "getTrainingTime", true);
-        }
-        // training
-        // Required params: cortexToken, profile, status
-        public void Training(string cortexToken, string sessionId, string status, string detection, string action)
-        {
-            JObject param = new JObject();
-            param.Add("session", sessionId);
-            param.Add("cortexToken", cortexToken);
-            param.Add("status", status);
-            param.Add("detection", detection);
-            param.Add("action", action);
-
-            SendTextMessage(param, "training", true);
-        }
-
-
-
     }
 }

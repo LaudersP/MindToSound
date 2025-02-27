@@ -112,51 +112,5 @@ namespace CortexAccess
                 _ctxClient.UpdateSession(_cortexToken, _sessionId, "close");
             }
         }
-
-        // ... other code ...
-
-        public void StartRecord(string cortexToken, string title,
-                                JToken description = null, JToken subjectName = null, List<string> tags = null)
-        {
-            if (!String.IsNullOrEmpty(_sessionId))
-            {
-                _ctxClient.CreateRecord(cortexToken, _sessionId, title, description, subjectName, tags);
-            }
-            else
-            {
-                Console.WriteLine("StartRecord: invalid sessionId.");
-            }
-        }
-
-        /// <summary>
-        /// Stop a record that was previously started by createRecord
-        /// </summary>
-        public void StopRecord(string cortexToken)
-        {
-            if (!String.IsNullOrEmpty(_sessionId))
-            {
-                _ctxClient.StopRecord(cortexToken, _sessionId);
-            }
-            else
-            {
-                 Console.WriteLine("StopRecord: invalid sessionId.");
-            }
-        }
-
-        /// <summary>
-        /// Update a record.
-        /// </summary>
-        public void UpdateRecord(string cortexToken, string recordId,
-                                string description = null, List<string> tags = null)
-        {
-            if (!String.IsNullOrEmpty(_sessionId))
-            {
-                _ctxClient.UpdateRecord(cortexToken, recordId, description, tags);
-            }
-            else
-            {
-                 Console.WriteLine("UpdateRecord: invalid sessionId.");
-            }
-        }
     }
 }
