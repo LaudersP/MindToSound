@@ -4,5 +4,13 @@ venv
 cortex_creds
 Temp/
 *build-*
-*/bin/
-*/obj/
+
+# Ignore temporary and build files
+csharp/.vs/
+csharp/BandPowerLogger/obj/
+csharp/CortexAccess/obj/
+
+# Stop tracking Config.cs
+csharp/CortexAccess/Config.cs
+/csharp/CortexAccess/Config.cs
+/csharp/CortexAccess/Config.cs
