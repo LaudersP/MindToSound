@@ -2,12 +2,7 @@
 .DS_Store
 venv
 cortex_creds
-**__pycache__**
-unity/*.sln
-unity/*.csproj
-unity/Library/
-unity/Tmp/
 Temp/
-unity/*.userprefs
-unity/*.unityproj
 *build-*
+*/bin/
+*/obj/
