@@ -32,13 +32,21 @@ namespace CortexAccess
         {
             SessionId = sessionId;
             ApplicationId = appId;
-            if (status == "opened")
-                Status = SessionStatus.Opened;
-            else if (status == "activated")
-                Status = SessionStatus.Activated;
-            else
-                Status = SessionStatus.Closed;
+
+            switch (status)
+            {
+                case "opened":
+                    Status = SessionStatus.Opened;
+                    break;
+                case "activated":
+                    Status = SessionStatus.Activated;
+                    break;
+                default:
+                    Status = SessionStatus.Closed;
+                    break;
+            }
         }
+
         public string SessionId { get; set; }
         public SessionStatus Status { get; set; }
         public string ApplicationId { get; set; }
@@ -115,20 +123,6 @@ namespace CortexAccess
         public event EventHandler<SessionEventArgs> OnUpdateSession;
         public event EventHandler<MultipleResultEventArgs> OnSubscribeData;
         public event EventHandler<MultipleResultEventArgs> OnUnSubscribeData;
-        public event EventHandler<MultipleResultEventArgs> OnDeleteRecords;
-        public event EventHandler<JObject> OnInjectMarker;
-        public event EventHandler<JObject> OnUpdateMarker;
-        public event EventHandler<JObject> OnGetDetectionInfo;
-        public event EventHandler<string> OnGetCurrentProfile;
-        public event EventHandler<string> OnCreateProfile;
-        public event EventHandler<string> OnLoadProfile;
-        public event EventHandler<string> OnSaveProfile;
-        public event EventHandler<bool> OnUnloadProfile;
-        public event EventHandler<string> OnDeleteProfile;
-        public event EventHandler<string> OnRenameProfile;
-        public event EventHandler<JArray> OnQueryProfile;
-        public event EventHandler<double> OnGetTrainingTime;
-        public event EventHandler<JObject> OnTraining;
         public event EventHandler<string> SessionClosedNotify;
         public event EventHandler<HeadsetConnectEventArgs> HeadsetConnectNotify;
         public event EventHandler<string> HeadsetScanFinished;
@@ -247,191 +241,141 @@ namespace CortexAccess
         // handle Response
         private void HandleResponse(string method, JToken data)
         {
-            if (method == "queryHeadsets")
+            switch(method)
             {
-                List<Headset> headsetLists = new List<Headset>();
-                foreach (JObject item in data)
-                {
-                    headsetLists.Add(new Headset(item));
-                }
-                OnQueryHeadset(this, headsetLists);
-
-            }
-            else if (method == "controlDevice")
-            {
-                string command = (string)data["command"];
-            }
-            else if (method == "getUserLogin")
-            {
-                JArray users = (JArray)data;
-                string username = "";
-                if (users.Count > 0)
-                {
-                    foreach (JObject user in users)
+                case "queryHeadsets":
+                    List<Headset> headsetLists = new List<Headset>();
+                    foreach(JObject item in data)
                     {
-                        if (user["currentOSUId"].ToString() == user["loggedInOSUId"].ToString())
+                        headsetLists.Add(new Headset(item));
+                    }
+                    OnQueryHeadset(this, headsetLists);
+                    break;
+
+                case "getUserLogin":
+                    JArray users = (JArray)data;
+                    string username = "";
+                    if (users.Count > 0)
+                    {
+                        foreach (JObject user in users)
                         {
-                            username = user["username"].ToString();
+                            if (user["currentOSUId"].ToString() == user["loggedInOSUId"].ToString())
+                            {
+                                username = user["username"].ToString();
+                            }
                         }
                     }
-                }
-                OnGetUserLogin(this, username);
-            }
-            else if (method == "hasAccessRight")
-            {
-                bool hasAccessRight = (bool)data["accessGranted"];
-                OnHasAccessRight(this, hasAccessRight);
-            }
-            else if (method == "requestAccess")
-            {
-                bool hasAccessRight = (bool)data["accessGranted"];
-                OnRequestAccessDone(this, hasAccessRight);
-            }
-            else if (method == "authorize")
-            {
-                string token = (string)data["cortexToken"];
-                bool eulaAccepted = true;
-                if (data["warning"] != null)
-                {
-                    JObject warning = (JObject)data["warning"];
-                    eulaAccepted = !((int)warning["code"] == WarningCode.UserNotAcceptLicense);
-                    token = "";
-                }
-                OnAuthorize(this, token);
-            }
-            else if (method == "createSession")
-            {
-                string sessionId = (string)data["id"];
-                string status = (string)data["status"];
-                string appId = (string)data["appId"];
-                OnCreateSession(this, new SessionEventArgs(sessionId, status, appId));
-            }
-            else if (method == "updateSession")
-            {
-                string sessionId = (string)data["id"];
-                string status = (string)data["status"];
-                string appId = (string)data["appId"];
-                OnUpdateSession(this, new SessionEventArgs(sessionId, status, appId));
-            }
-            else if (method == "unsubscribe")
-            {
-                JArray successList = (JArray)data["success"];
-                JArray failList = (JArray)data["failure"];
-                OnUnSubscribeData(this, new MultipleResultEventArgs(successList, failList));
-            }
-            else if (method == "subscribe")
-            {
-                JArray successList = (JArray)data["success"];
-                JArray failList = (JArray)data["failure"];
-                OnSubscribeData(this, new MultipleResultEventArgs(successList, failList));
+                    OnGetUserLogin(this, username);
+                    break;
 
-            }
-            else if (method == "getDetectionInfo")
-            {
-                OnGetDetectionInfo(this, (JObject)data);
-            }
-            else if (method == "getCurrentProfile")
-            {
-                if (data["name"] == null)
-                    OnGetCurrentProfile(this, "");
-                else
-                    OnGetCurrentProfile(this, (string)data["name"]);
-            }
-            else if (method == "setupProfile")
-            {
-                string action = (string)data["action"];
-                string profileName = (string)data["name"];
-                if (action == "create")
-                {
-                    OnCreateProfile(this, profileName);
-                }
-                else if (action == "load")
-                {
-                    OnLoadProfile(this, profileName);
-                }
-                else if (action == "save")
-                {
-                    OnSaveProfile(this, profileName);
-                }
-                else if (action == "unload")
-                {
-                    OnUnloadProfile(this, true);
-                }
-                else if (action == "rename")
-                {
-                    OnRenameProfile(this, profileName);
-                }
-                else if (action == "delete")
-                {
-                    OnDeleteProfile(this, profileName);
-                }
+                case "hasAccessRight":
+                    OnHasAccessRight(this, (bool)data["accessGranted"]);
+                    break;
+
+                case "requestAccess":
+                    OnRequestAccessDone(this, (bool)data["accessGranted"]);
+                    break;
+
+                case "authorize":
+                    string token = (string)data["cortexToken"];
+                    bool eulaAccepted = true;
+                    if (data["warning"] != null)
+                    {
+                        JObject warning = (JObject)data["warning"];
+                        eulaAccepted = !((int)warning["code"] == WarningCode.UserNotAcceptLicense);
+                        token = "";
+                    }
+                    OnAuthorize(this, token);
+                    break;
+
+                case "createSession":
+                    OnCreateSession(this, new SessionEventArgs (
+                        (string)data["id"],
+                        (string)data["status"],
+                        (string)data["appId"]
+                    ));
+                    break;
+
+                case "updateSession":
+                    OnUpdateSession(this, new SessionEventArgs(
+                        (string)data["id"],
+                        (string)data["status"],
+                        (string)data["appId"]
+                    ));
+                    break;
+
+                case "unsubscribe":
+                    OnUnSubscribeData(this, new MultipleResultEventArgs(
+                        (JArray)data["success"],
+                        (JArray)data["failure"]
+                    ));
+                    break;
+
+                case "subscribe":
+                    OnSubscribeData(this, new MultipleResultEventArgs(
+                        (JArray)data["success"],
+                        (JArray)data["failure"]
+                    ));
+                    break;
             }
         }
 
         // handle warning response
         private void HandleWarning(int code, JToken messageData)
         {
-            _utilities.SendWarningMessage(code.ToString());
-            if (code == WarningCode.AccessRightGranted)
-            {
-                // granted access right
-                OnAccessRightGranted(this, true);
-            }
-            else if (code == WarningCode.AccessRightRejected)
-            {
-                OnAccessRightGranted(this, false);
-            }
-            else if (code == WarningCode.EULAAccepted)
-            {
-                OnEULAAccepted(this, true);
-            }
-            else if (code == WarningCode.UserLogin)
-            {
-                string message = messageData.ToString();
-                OnUserLogin(this, message);
-            }
-            else if (code == WarningCode.UserLogout)
-            {
-                string message = messageData.ToString();
-                OnUserLogout(this, message);
-            }
-            else if (code == WarningCode.HeadsetScanFinished)
-            {
-                string message = messageData["behavior"].ToString();
-                HeadsetScanFinished(this, message);
-            }
-            else if (code == WarningCode.StreamStop)
-            {
-                string sessionId = messageData["sessionId"].ToString();
-                SessionClosedNotify(this, sessionId);
-            }
-            else if (code == WarningCode.SessionAutoClosed)
-            {
-                string sessionId = messageData["sessionId"].ToString();
-                SessionClosedNotify(this, sessionId);
-            }
-            else if (code == WarningCode.HeadsetConnected)
-            {
-                string headsetId = messageData["headsetId"].ToString();
-                string message = messageData["behavior"].ToString();
-                Console.WriteLine("handleWarning:" + message);
-                HeadsetConnectNotify(this, new HeadsetConnectEventArgs(true, message, headsetId));
-            }
-            else if (code == WarningCode.HeadsetWrongInformation ||
-                     code == WarningCode.HeadsetCannotConnected ||
-                     code == WarningCode.HeadsetConnectingTimeout)
-            {
-                string headsetId = messageData["headsetId"].ToString();
-                string message = messageData["behavior"].ToString();
-                HeadsetConnectNotify(this, new HeadsetConnectEventArgs(false, message, headsetId));
-            }
-            else if (code == WarningCode.CortexAutoUnloadProfile)
-            {
-                // the current profile is unloaded automatically
-                OnUnloadProfile(this, true);
-            }
+            _utilities.SendWarningMessage(code.ToString(), false);
 
+            switch (code)
+            {
+                case WarningCode.StreamStop:
+                case WarningCode.SessionAutoClosed:
+                    SessionClosedNotify(this, messageData["sessionId"].ToString());
+                    break;
+
+                case WarningCode.UserLogin:
+                    OnUserLogin(this, messageData.ToString());
+                    break;
+
+                case WarningCode.UserLogout:
+                    OnUserLogout(this, messageData.ToString());
+                    break;
+
+                case WarningCode.AccessRightGranted:
+                    OnAccessRightGranted(this, true);
+                    break;
+
+                case WarningCode.AccessRightRejected:
+                    OnAccessRightGranted(this, false);
+                    break;
+
+                case WarningCode.EULAAccepted:
+                    OnEULAAccepted(this, true);
+                    break;
+
+                case WarningCode.HeadsetWrongInformation:
+                case WarningCode.HeadsetCannotConnected:
+                case WarningCode.HeadsetConnectingTimeout:
+                    HeadsetConnectNotify(this, new HeadsetConnectEventArgs(
+                        false,
+                        messageData["behavior"].ToString(),
+                        messageData["headsetId"].ToString()
+                    ));
+                    break;
+
+                case WarningCode.HeadsetConnected:
+                    HeadsetConnectNotify(this, new HeadsetConnectEventArgs(
+                        true,
+                        messageData["behavior"].ToString(),
+                        messageData["headsetId"].ToString()
+                    ));
+                    break;
+
+                case WarningCode.HeadsetScanFinished:
+                    HeadsetScanFinished(this, messageData["behavior"].ToString());
+                    break;
+            }
         }
+
         private void WebSocketClient_Closed(object sender, EventArgs e)
         {
             m_CloseEvent.Set();
@@ -463,6 +407,7 @@ namespace CortexAccess
             {
                 _utilities.SendErrorMessage("Unable to create a session, please restart the program.");
             }
+
             if (_wSC.State == WebSocketState.Open)
             {
                 _isWSConnected = true;
@@ -580,116 +525,6 @@ namespace CortexAccess
             SendTextMessage(param, "updateSession", true);
         }
 
-        // CreateRecord
-        // Required params: session, title, cortexToken
-        public void CreateRecord(string cortexToken, string sessionId, string title,
-                                 JToken description = null, JToken subjectName = null, List<string> tags = null)
-        {
-            JObject param = new JObject();
-            param.Add("session", sessionId);
-            param.Add("cortexToken", cortexToken);
-            param.Add("title", title);
-            if (description != null)
-            {
-                param.Add("description", description);
-            }
-            if (subjectName != null)
-            {
-                param.Add("subjectName", subjectName);
-            }
-            if (tags != null)
-            {
-                param.Add("tags", JArray.FromObject(tags));
-            }
-            SendTextMessage(param, "createRecord", true);
-        }
-
-        // StopRecord
-        // Required params: session, cortexToken
-        public void StopRecord(string cortexToken, string sessionId)
-        {
-            JObject param = new JObject();
-            param.Add("session", sessionId);
-            param.Add("cortexToken", cortexToken);
-            SendTextMessage(param, "stopRecord", true);
-        }
-
-        // UpdateRecord
-        // Required params: session, record
-        public void UpdateRecord(string cortexToken, string recordId, string description = null, List<string> tags = null)
-        {
-            JObject param = new JObject();
-            param.Add("record", recordId);
-            param.Add("cortexToken", cortexToken);
-            if (description != null)
-            {
-                param.Add("description", description);
-            }
-            if (tags != null)
-            {
-                param.Add("tags", JArray.FromObject(tags));
-            }
-            SendTextMessage(param, "updateRecord", true);
-        }
-
-        // QueryRecord
-        // Required params: cortexToken, query
-        public void QueryRecord(string cortexToken, JObject query, JArray orderBy = null, JToken offset = null, JToken limit = null)
-        {
-            JObject param = new JObject();
-            param.Add("query", query);
-            param.Add("cortexToken", cortexToken);
-            if (orderBy != null)
-            {
-                param.Add("orderBy", orderBy);
-            }
-            if (offset != null)
-            {
-                param.Add("offset", (long)offset);
-            }
-            if (limit != null)
-            {
-                param.Add("limit", (long)limit);
-            }
-            SendTextMessage(param, "queryRecords", true);
-        }
-
-        // DeleteRecord
-        // Required params: session, records
-        public void DeleteRecord(string cortexToken, List<string> records)
-        {
-            JObject param = new JObject();
-            param.Add("records", JArray.FromObject(records));
-            param.Add("cortexToken", cortexToken);
-            SendTextMessage(param, "deleteRecord", true);
-        }
-
-        // InjectMarker
-        // Required params: session, cortexToken, label, value, time
-        public void InjectMarker(string cortexToken, string sessionId, string label, JToken value, double time, string port = null)
-        {
-            JObject param = new JObject();
-            param.Add("session", sessionId);
-            param.Add("cortexToken", cortexToken);
-            param.Add("label", label);
-            param.Add("time", time);
-            param.Add("value", value);
-            if (port != null)
-                param.Add("port", port);
-            SendTextMessage(param, "injectMarker", true);
-        }
-
-        // UpdateMarker
-        // Required params: session, cortexToken, label, value, time
-        public void UpdateMarker(string cortexToken, string sessionId, string markerId, double time)
-        {
-            JObject param = new JObject();
-            param.Add("session", sessionId);
-            param.Add("cortexToken", cortexToken);
-            param.Add("markerId", markerId);
-            param.Add("time", time);
-            SendTextMessage(param, "updateMarker", true);
-        }
 
         // Subscribe Data
         // Required params: session, cortexToken, streams
@@ -711,74 +546,6 @@ namespace CortexAccess
             param.Add("cortexToken", cortexToken);
             param.Add("streams", JToken.FromObject(streams));
             SendTextMessage(param, "unsubscribe", true);
-        }
-
-        // Training - Profile
-        // getDetectionInfo
-        // Required params: detection
-        public void GetDetectionInfo(string detection)
-        {
-            JObject param = new JObject();
-            param.Add("detection", detection);
-            SendTextMessage(param, "getDetectionInfo", true);
-        }
-        // getCurrentProfile
-        // Required params: cortexToken, headset
-        public void GetCurrentProfile(string cortexToken, string headsetId)
-        {
-            JObject param = new JObject();
-            param.Add("cortexToken", cortexToken);
-            param.Add("headset", headsetId);
-            SendTextMessage(param, "getCurrentProfile", true);
-        }
-        // setupProfile
-        // Required params: cortexToken, profile, status
-        public void SetupProfile(string cortexToken, string profile, string status, string headsetId = null, string newProfileName = null)
-        {
-            JObject param = new JObject();
-            param.Add("profile", profile);
-            param.Add("cortexToken", cortexToken);
-            param.Add("status", status);
-            if (headsetId != null)
-            {
-                param.Add("headset", headsetId);
-            }
-            if (newProfileName != null)
-            {
-                param.Add("newProfileName", newProfileName);
-            }
-            SendTextMessage(param, "setupProfile", true);
-        }
-        // queryProfile
-        // Required params: cortexToken
-        public void QueryProfile(string cortexToken)
-        {
-            JObject param = new JObject();
-            param.Add("cortexToken", cortexToken);
-            SendTextMessage(param, "queryProfile", true);
-        }
-        // getTrainingTime
-        // Required params: cortexToken
-        public void GetTrainingTime(string cortexToken, string detection, string sessionId)
-        {
-            JObject param = new JObject();
-            param.Add("cortexToken", cortexToken);
-            param.Add("detection", detection);
-            param.Add("session", sessionId);
-            SendTextMessage(param, "getTrainingTime", true);
-        }
-        // training
-        // Required params: cortexToken, profile, status
-        public void Training(string cortexToken, string sessionId, string status, string detection, string action)
-        {
-            JObject param = new JObject();
-            param.Add("session", sessionId);
-            param.Add("cortexToken", cortexToken);
-            param.Add("status", status);
-            param.Add("detection", detection);
-            param.Add("action", action);
-
-            SendTextMessage(param, "training", true);
         }
     }
 }

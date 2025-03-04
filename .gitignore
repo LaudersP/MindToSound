@@ -9,6 +9,8 @@ Temp/
 csharp/.vs/
 csharp/BandPowerLogger/obj/
 csharp/CortexAccess/obj/
+csharp/BandPowerLogger/bin/
+csharp/CortexAccess/bin/
 
 # Stop tracking Config.cs
 csharp/CortexAccess/Config.cs

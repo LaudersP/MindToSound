@@ -1,6 +1,4 @@
 ﻿using System;
-using Newtonsoft.Json.Linq;
-using System.Collections.Generic;
 
 namespace CortexAccess
 {
@@ -11,7 +9,7 @@ namespace CortexAccess
         private SessionStatus _status;
         private CortexClient _ctxClient;
         private string _cortexToken;
-        private Utils _utilities;
+        private Utils _utilities = new Utils();
 
         //event
         public event EventHandler<string> OnSessionCreated;

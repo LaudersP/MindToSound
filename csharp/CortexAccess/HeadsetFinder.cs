@@ -11,7 +11,7 @@ namespace CortexAccess
         private CortexClient _ctxClient;
         private string _wantedHeadsetId; // headset id of wanted headset device
         private Timer _aTimer;
-        private Utils _utitilies;
+        private Utils _utitilies = new Utils();
 
         private bool _hasHeadsetConnected;
         private bool _isHeadsetScanning = false;
@@ -57,7 +57,6 @@ namespace CortexAccess
         private void OnHeadsetScanFinished(object sender, string message)
         {
             _isHeadsetScanning = false;
-            Console.WriteLine(message);
         }
 
         private void OnHeadsetConnectNotify(object sender, HeadsetConnectEventArgs e)

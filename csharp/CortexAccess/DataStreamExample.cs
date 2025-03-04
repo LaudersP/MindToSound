@@ -9,7 +9,6 @@ namespace CortexAccess
     {
         private CortexClient _ctxClient;
         private List<string> _streams;
-        private Utils _utilities = new Utils();
         private string _cortexToken;
         private string _sessionId;
         private bool _isActiveSession;
@@ -18,6 +17,7 @@ namespace CortexAccess
         private Authorizer _authorizer;
         private SessionCreator _sessionCreator;
         private string _wantedHeadsetId;
+        private Utils _utilities = new Utils();
 
         public List<string> Streams
         {
@@ -94,6 +94,7 @@ namespace CortexAccess
                     _streams.Remove(streamName);
                 }
             }
+
             foreach (JObject ele in e.FailList)
             {
                 string streamName = (string)ele["streamName"];
@@ -116,6 +117,7 @@ namespace CortexAccess
                     _streams.Remove(streamName);
                 }
             }
+
             Dictionary<string, JArray> header = new Dictionary<string, JArray>();
             foreach (JObject ele in e.SuccessList)
             {
@@ -123,6 +125,7 @@ namespace CortexAccess
                 JArray cols = (JArray)ele["cols"];
                 header.Add(streamName, cols);
             }
+
             if (header.Count > 0)
             {
                 OnSubscribed(this, header);
@@ -173,26 +176,28 @@ namespace CortexAccess
 
         private void StreamDataReceived(object sender, StreamDataEventArgs e)
         {
-            //Console.WriteLine(e.StreamName + " data received.");
             ArrayList data = e.Data.ToObject<ArrayList>();
+
             // insert timestamp to datastream
             data.Insert(0, e.Time);
-            if (e.StreamName == "eeg")
-            {
-                OnEEGDataReceived(this, data);
-            }
-            else if (e.StreamName == "mot")
-            {
 
-                OnMotionDataReceived(this, data);
-            }
-            else if (e.StreamName == "met")
+            switch(e.StreamName)
             {
-                OnPerfDataReceived(this, data);
-            }
-            else if (e.StreamName == "pow")
-            {
-                OnBandPowerDataReceived(this, data);
+                case "eeg":
+                    OnEEGDataReceived(this, data); 
+                    break;
+
+                case "mot":
+                    OnMotionDataReceived(this, data);
+                    break;
+
+                case "met":
+                    OnPerfDataReceived(this, data);
+                    break;
+
+                case "pow":
+                    OnBandPowerDataReceived(this, data);
+                    break;
             }
         }
         private void MessageErrorRecieved(object sender, ErrorMsgEventArgs e)

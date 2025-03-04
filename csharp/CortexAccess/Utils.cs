@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
 
 namespace CortexAccess
 {
@@ -18,32 +17,39 @@ namespace CortexAccess
         }
 
         // Print a colored message
-        private void SendColoredMessage(string messageType, ConsoleColor typeColor, string messageContent)
+        public void SendColoredMessage(string messageType, ConsoleColor typeColor, string messageContent, bool newLine)
         {
             Console.ForegroundColor = typeColor;
             Console.Write($"[{messageType}] ");
             Console.ForegroundColor = ConsoleColor.White;
 
-            Console.WriteLine(messageContent);
+            if (newLine)
+            {
+                Console.WriteLine(messageContent);
+            }
+            else
+            {
+                Console.Write(messageContent);
+            }
 
         }
 
         // Print a error message
-        public void SendErrorMessage(string message)
+        public void SendErrorMessage(string message, bool newLine = true)
         {
-            SendColoredMessage("ERROR", ConsoleColor.Red, message);
+            SendColoredMessage("ERROR", ConsoleColor.Red, message, newLine);
         }
 
         // Print a success message
-        public void SendSuccessMessage(string message)
+        public void SendSuccessMessage(string message, bool newLine = true)
         {
-            SendColoredMessage("SUCCESS", ConsoleColor.Green, message);
+            SendColoredMessage("SUCCESS", ConsoleColor.Green, message, newLine);
         }
 
         // Print a warning message
-        public void SendWarningMessage(string message)
+        public void SendWarningMessage(string message, bool newLine = true)
         {
-            SendColoredMessage("WARNING", ConsoleColor.DarkYellow, message);
+            SendColoredMessage("WARNING", ConsoleColor.DarkYellow, message, newLine);
         }
     }
 }
