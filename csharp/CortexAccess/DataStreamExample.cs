@@ -142,6 +142,7 @@ namespace CortexAccess
             string streamsString = string.Join(", ", Streams);
 
             _utilities.SendSuccessMessage("Connected to Band Power Logger!");
+            Console.WriteLine("\nPress Esc to end program and exit\n");
 
             // subscribe
             _ctxClient.Subscribe(_cortexToken, _sessionId, Streams);

@@ -323,7 +323,7 @@ namespace CortexAccess
         // handle warning response
         private void HandleWarning(int code, JToken messageData)
         {
-            _utilities.SendWarningMessage(code.ToString(), false);
+            //_utilities.SendWarningMessage(code.ToString(), false);
 
             switch (code)
             {
