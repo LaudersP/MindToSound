@@ -94,12 +94,16 @@ namespace BandPowerLogger
                 _csvFilename = _csvFilename.Replace(':', '_');
                 _csvFilename = _csvFilename.Replace('/', '_');
 
-                _utilities.SendColoredMessage("SAVING", ConsoleColor.Magenta, "Output path: \'" + _csvFilename + "\'", true);
 
-                string saveDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "saved_sessions");
+                // Get the documents directory path
+                string documentDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+                // Construct the save path
+                string saveDirectory = Path.Combine(documentDirectory, "MindToSound", "saved_sessions");
                 if (!Directory.Exists(saveDirectory))
                     Directory.CreateDirectory(saveDirectory);
 
+                _utilities.SendColoredMessage("SAVING", ConsoleColor.Magenta, "Output path: \'" + saveDirectory + "\'", true);
                 _outFileStream = new FileStream(Path.Combine(saveDirectory, _csvFilename), FileMode.Append, FileAccess.Write);
             }
             Console.WriteLine();
