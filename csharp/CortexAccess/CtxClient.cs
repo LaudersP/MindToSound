@@ -190,24 +190,33 @@ namespace CortexAccess
             if (response["id"] != null)
             {
                 int id = (int)response["id"];
-                string method = _methodForRequestId[id];
-                _methodForRequestId.Remove(id);
 
-                if (response["error"] != null)
+                // Prevent the KeyNotFoundException happening on program shutdown
+                if(_methodForRequestId.ContainsKey(id))
                 {
-                    JObject error = (JObject)response["error"];
-                    int code = (int)error["code"];
-                    string errorMessage = (string)error["message"];
-                    _utilities.SendErrorMessage(errorMessage);
+                    string method = _methodForRequestId[id];
+                    _methodForRequestId.Remove(id);
 
-                    //Send Error message event
-                    OnErrorMsgReceived(this, new ErrorMsgEventArgs(code, errorMessage));
+                    if (response["error"] != null)
+                    {
+                        JObject error = (JObject)response["error"];
+                        int code = (int)error["code"];
+                        string errorMessage = (string)error["message"];
+                        _utilities.SendErrorMessage(errorMessage);
+
+                        //Send Error message event
+                        OnErrorMsgReceived(this, new ErrorMsgEventArgs(code, errorMessage));
+                    }
+                    else
+                    {
+                        // handle response
+                        JToken data = response["result"];
+                        HandleResponse(method, data);
+                    }
                 }
                 else
                 {
-                    // handle response
-                    JToken data = response["result"];
-                    HandleResponse(method, data);
+                    _utilities.SendWarningMessage("Received response for unknown request ID: " + id);
                 }
             }
             else if (response["sid"] != null)
