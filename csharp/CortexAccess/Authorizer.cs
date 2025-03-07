@@ -66,7 +66,6 @@ namespace CortexAccess
         {
             if (!String.IsNullOrEmpty(cortexToken))
             {
-                _utilities.SendSuccessMessage("User accepted EULA!");
                 _cortexToken = cortexToken;
                 _isEulaAccepted = true;
                 OnAuthorized(this, _cortexToken);

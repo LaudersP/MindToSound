@@ -217,6 +217,10 @@ namespace CortexAccess
         // start
         public void Start(string licenseID = "", bool activeSession = false, string wantedHeadsetId = "")
         {
+            if (wantedHeadsetId == "")
+                _utilities.SendColoredMessage("CONNECTION", ConsoleColor.Cyan, "Attempting to connect to a headset...", true);
+            else
+                _utilities.SendColoredMessage("CONNECTION", ConsoleColor.Cyan, "Attempting to connect to \'" + wantedHeadsetId + "\'", true);
             _wantedHeadsetId = wantedHeadsetId;
             _isActiveSession = activeSession;
             _authorizer.Start(licenseID);

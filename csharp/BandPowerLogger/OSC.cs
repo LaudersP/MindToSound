@@ -25,7 +25,11 @@ namespace CortexAccess
             // Set up endpoint for receiving from the specific address
             _receiveEndpoint = new IPEndPoint(IPAddress.Parse(_ipAddress), _portNum);
 
-            _utilities.SendSuccessMessage("Sending data on [" + _portNum + "]");
+            _utilities.SendSuccessMessage("Sending data on [", false);
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.Write(_portNum);
+            Console.ForegroundColor= ConsoleColor.White;
+            Console.WriteLine("]");
         }
 
         public void SendMessage(string address, params object[] arguments)
