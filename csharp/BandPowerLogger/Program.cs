@@ -13,7 +13,8 @@ namespace BandPowerLogger
     {
         private static CortexAccess.Utils _utilities = new CortexAccess.Utils();
         private static OSC _osc;
-        private static string _ipAddress = "127.0.0.1";        
+        private static string _wantedHeadsetId = null;
+        private static readonly string _ipAddress = "127.0.0.1";        
         private static int _wantedPortNumber = 55555;
 
         private static bool _saveData = false;
@@ -26,8 +27,18 @@ namespace BandPowerLogger
             PrintProgramTitle();
 
             // Ask user for specific headset
-            _utilities.SendColoredMessage("OPTIONAL", ConsoleColor.Yellow, "Enter the desired headset ID (Example: EPOCX-71D833AC): ", false);
-            string wantedHeadsetId = Console.ReadLine();
+            while (true)
+            {
+                _utilities.SendColoredMessage("OPTIONAL", ConsoleColor.Yellow, "Enter the desired headset ID (Example: EPOCX-71D833AC): ", false);
+                _wantedHeadsetId = Console.ReadLine();
+
+                // Check for valid input
+                if(_wantedHeadsetId == "" || _wantedHeadsetId.Length == 14)
+                {
+                    _wantedHeadsetId = _wantedHeadsetId.ToUpper();
+                    break;
+                }
+            }
 
             // Ask the user for specific port to host the OSC channel on
             while (true)
@@ -101,7 +112,7 @@ namespace BandPowerLogger
             dse.AddStreams("pow");
             dse.OnSubscribed += SubscribedOK;
             dse.OnBandPowerDataReceived += OnBandPowerOK;
-            dse.Start("", false, wantedHeadsetId);
+            dse.Start("", false, _wantedHeadsetId);
 
             // Block while the program is running
             while (Console.ReadKey().Key != ConsoleKey.Escape);
