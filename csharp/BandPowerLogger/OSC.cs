@@ -3,16 +3,16 @@ using CoreOSC.IO;
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace CortexAccess
 {
     public class OSC
     {
         private UdpClient _udpClient;
-        private string _ipAddress;
-        private int _portNum;
-        private IPEndPoint _receiveEndpoint;
-        private Utils _utilities = new Utils();
+        private readonly string _ipAddress;
+        private readonly int _portNum;
+        private readonly Utils _utilities = new();
 
         public OSC(string ipAddress, int portNum)
         {
@@ -21,9 +21,6 @@ namespace CortexAccess
 
             // Create the instance of the client for sending
             _udpClient = new UdpClient(_ipAddress, _portNum);
-
-            // Set up endpoint for receiving from the specific address
-            _receiveEndpoint = new IPEndPoint(IPAddress.Parse(_ipAddress), _portNum);
 
             _utilities.SendSuccessMessage("Sending data on [", false);
             Console.ForegroundColor = ConsoleColor.Cyan;
@@ -34,9 +31,23 @@ namespace CortexAccess
 
         public void SendMessage(string address, params object[] arguments)
         {
-            var message = new OscMessage(new Address(address), arguments);
-           
-            _udpClient.SendMessageAsync(message).Wait();
+            try
+            {
+                // Construct the OSC message
+                var message = new OscMessage(new Address(address), arguments);
+
+                // Send the OSC messsage
+                _udpClient.SendMessageAsync(message).Wait();
+            }
+            catch (AggregateException ex) when (ex.InnerException is SocketException socketEx && socketEx.Message == "Connection refused")
+            {
+                _utilities.SendErrorMessage("Connection refused - No application is listening on " + _portNum + ".");
+                Thread.Sleep(2000);
+            }
+            catch (Exception ex)
+            {
+                _utilities.SendErrorMessage(ex.Message);
+            }
         }
 
         // Clean up resources when done
