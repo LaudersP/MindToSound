@@ -135,6 +135,7 @@ namespace CortexAccess
         private CortexClient()
         {
             _nextRequestId = 1;
+            System.Net.ServicePointManager.ServerCertificateValidationCallback = (sender, certicate, chain, SslPolicyErrors) => true;
             _wSC = new WebSocket(Url);
             // Since Emotiv Cortex 3.7.0, the supported SSL Protocol will be TLS1.2 or later
             _wSC.Security.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12;

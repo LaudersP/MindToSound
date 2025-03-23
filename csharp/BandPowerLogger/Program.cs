@@ -14,13 +14,16 @@ namespace BandPowerLogger
         private static CortexAccess.Utils _utilities = new CortexAccess.Utils();
         private static OSC _osc;
         private static string _wantedHeadsetId = null;
-        private static readonly string _ipAddress = "127.0.0.1";        
+        private static readonly string _ipAddress = "127.0.0.1";
         private static int _wantedPortNumber = 55555;
 
         private static bool _saveData = false;
         private static string _csvFilename;
         private static FileStream _outFileStream;
-        
+
+        private static readonly string[] _bands = { "theta", "alpha", "betaL", "betaH", "gamma" };
+        private static readonly string[] _sensors = { "AF3", "F7", "F3", "FC5", "T7", "P7", "O1", "O2", "P8", "T8", "FC6", "F4", "F8", "AF4" };
+
         static void Main(string[] args)
         {
             // Start up message
@@ -33,7 +36,7 @@ namespace BandPowerLogger
                 _wantedHeadsetId = Console.ReadLine();
 
                 // Check for valid input
-                if(_wantedHeadsetId == "" || _wantedHeadsetId.Length == 14)
+                if (_wantedHeadsetId == "" || _wantedHeadsetId.Length == 14)
                 {
                     _wantedHeadsetId = _wantedHeadsetId.ToUpper();
                     break;
@@ -52,7 +55,7 @@ namespace BandPowerLogger
 
                 // Ensure the port is valid
                 int intInput = Convert.ToInt32(userInput);
-                if(intInput < 49152 || intInput > 65535) // Registerd ports
+                if (intInput < 49152 || intInput > 65535) // Registerd ports
                 {
                     continue;
                 }
@@ -74,13 +77,13 @@ namespace BandPowerLogger
                     _saveData = true;
                     break;
                 }
-                else if(userInput.ToUpper() == "N" || userInput == "")
+                else if (userInput.ToUpper() == "N" || userInput == "")
                 {
                     break;
                 }
             }
 
-            if(_saveData)
+            if (_saveData)
             {
                 // Get subject name
                 Console.Write("    Subject Name: ");
@@ -88,7 +91,7 @@ namespace BandPowerLogger
 
                 // Get the date/time
                 _csvFilename += DateTime.Now + ".csv";
-                
+
                 // Final formatting of the filename
                 _csvFilename = _csvFilename.Replace(' ', '_');
                 _csvFilename = _csvFilename.Replace(':', '_');
@@ -119,12 +122,14 @@ namespace BandPowerLogger
             dse.Start("", false, _wantedHeadsetId);
 
             // Block while the program is running
-            while (Console.ReadKey().Key != ConsoleKey.Escape);
+            while (Console.ReadKey().Key != ConsoleKey.Escape) ;
 
             // Send shutdown message
-            Console.Write("     ");
             Thread.Sleep(500);
             _utilities.SendWarningMessage("Attempting to closing the program, please wait...");
+
+            // Zero out the OSC channels
+            ZeroOSCChannels();
 
             // Unsubcribe from the stream
             dse.UnSubscribe();
@@ -135,11 +140,12 @@ namespace BandPowerLogger
             Thread.Sleep(5000);
 
             // Close the file if needed
-            if(_saveData)
+            if (_saveData)
             {
                 _outFileStream.Dispose();
                 _utilities.SendColoredMessage("SAVING", ConsoleColor.Magenta, "Data save completed.", true);
             }
+
 
             // End of program
             _utilities.SendSuccessMessage("Program terminated.");
@@ -161,11 +167,11 @@ namespace BandPowerLogger
             };
 
             Console.ForegroundColor = ConsoleColor.DarkCyan;
-            foreach(string line in programTitle)
+            foreach (string line in programTitle)
             {
                 Console.WriteLine(line);
             }
-            Console.ForegroundColor= ConsoleColor.White;
+            Console.ForegroundColor = ConsoleColor.White;
         }
 
         private static void SubscribedOK(object sender, Dictionary<string, JArray> e)
@@ -179,7 +185,7 @@ namespace BandPowerLogger
                     //add timeStamp to header
                     header.Insert(0, "Timestamp");
 
-                    if(_saveData)
+                    if (_saveData)
                         WriteDataToFile(header);
                 }
             }
@@ -190,34 +196,27 @@ namespace BandPowerLogger
         {
             // Check for a valid array of data
             if (data.Count == 0)
-            { 
+            {
                 _utilities.SendErrorMessage("No data received.");
                 return;
             }
 
-            string[] bands = { "theta", "alpha", "betaL", "betaH", "gamma" };
-            string[] sensors = { "AF3", "F7", "F3", "FC5", "T7", "P7", "O1", "O2", "P8", "T8", "FC6", "F4", "F8", "AF4" };
-
             // Output data in OSC protocol
             // ... /{band}/{sensor} {value}
             int i = 1;
-            for (; i < data.Count - 1; i++)
+            for (; i < data.Count; i++)
             {
                 // Determine the band
-                string band = bands[(i - 1) % 5];
+                string band = _bands[(i - 1) % 5];
 
                 // Assign the sensor
-                string sensor = sensors[(i - 1) / 5];
-
-                // Construct the OSC address string
-                string OscAddressString = $"/{band}/{sensor}";
+                string sensor = _sensors[(i - 1) / 5];
 
                 // Construct the arguments
-                float floatValue = Convert.ToSingle(data[i]);
-                object[] args = { floatValue };
+                object[] args = { Convert.ToSingle(data[i]) };
 
                 // Send the OSC message
-                _osc.SendMessage(OscAddressString, args);
+                _osc.SendMessage($"/{band}/{sensor}", args);
             }
         }
 
@@ -242,10 +241,28 @@ namespace BandPowerLogger
 
         private static void OnBandPowerOK(object sender, ArrayList eegData)
         {
-            if(_saveData)
+            if (_saveData)
                 WriteDataToFile(eegData);
 
             WriteDataToOSC(eegData);
+        }
+
+        // Send `0` to all the OSC channels
+        private static void ZeroOSCChannels()
+        {
+            // Iterate through the sensors
+            foreach (string sensor in _sensors)
+            {
+                //  Iterate through the bands
+                foreach (string band in _bands)
+                {
+                    // Zero out the channel
+                    object[] args = { 0.0f };
+                    _osc.SendMessage($"/{band}/{sensor}", args);
+                }
+            }
+
+            _utilities.SendSuccessMessage("OSC Channels Shutdown.");
         }
     }
 }

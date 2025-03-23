@@ -13,5 +13,6 @@
   </PropertyGroup>
   <PropertyGroup>
     <EnableSecurityDebugging>false</EnableSecurityDebugging>
+    <_LastSelectedProfileId>E:\laptop\MindToSound\csharp\BandPowerLogger\Properties\PublishProfiles\osx-x64.pubxml</_LastSelectedProfileId>
   </PropertyGroup>
 </Project>
